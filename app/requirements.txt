@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+torch
+torchvision
+transformers
+pillow
+python-dotenv
+python-multipart
+requests
+pydantic
