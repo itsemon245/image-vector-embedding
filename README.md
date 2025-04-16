@@ -9,6 +9,16 @@ git clone https://github.com/itsemon245/image-vector-embedding.git && cd image-v
 ```bash
 docker-compose up -d
 ```
+### Install pgvector extension in postgres
+- If your database is in you host machine run the script(it will ask for the database name, user and password)
+```bash
+./utils/pgv-init
+```
+
+- If your database is in a docker container run this from this directory(change the container name and database credentials accordingly)
+```bash
+docker exec -i my_container bash -s -- dbname dbuser dbpassword < ./utils/pgv-init
+```
 
 
 ## Usage

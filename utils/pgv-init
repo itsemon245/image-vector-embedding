@@ -1,0 +1,122 @@
+#!/bin/bash
+
+set -e
+
+# Color Variables
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
+BLUE='\033[0;34m'
+MAGENTA='\033[0;35m'
+NC='\033[0m' # No Color
+BOLD='\033[1m'
+
+# Function to print colored messages
+print_info() {
+    echo -e "${BLUE}[INFO]${NC} $1"
+}
+
+print_success() {
+    echo -e "${GREEN}[SUCCESS]${NC} $1"
+}
+
+print_warning() {
+    echo -e "${YELLOW}[WARNING]${NC} $1"
+}
+
+print_error() {
+    echo -e "${RED}[ERROR]${NC} $1"
+}
+
+# Detect package manager
+if command -v apt-get &> /dev/null; then
+    PKG_MANAGER="apt-get"
+    PKG_INSTALL="apt-get install -y"
+    PG_DEV_PKG="postgresql-server-dev-${PG_MAJOR}"
+elif command -v dnf &> /dev/null; then
+    PKG_MANAGER="dnf"
+    PKG_INSTALL="dnf install -y"
+    PG_DEV_PKG="postgresql${PG_MAJOR}-devel"
+elif command -v yum &> /dev/null; then
+    PKG_MANAGER="yum"
+    PKG_INSTALL="yum install -y"
+    PG_DEV_PKG="postgresql${PG_MAJOR}-devel"
+elif command -v pacman &> /dev/null; then
+    PKG_MANAGER="pacman"
+    PKG_INSTALL="pacman -S --noconfirm"
+    PG_DEV_PKG="postgresql"
+elif command -v zypper &> /dev/null; then
+    PKG_MANAGER="zypper"
+    PKG_INSTALL="zypper install -y"
+    PG_DEV_PKG="postgresql${PG_MAJOR}-devel"
+else
+    print_error "Could not detect package manager. Please install dependencies manually."
+    print_warning "Dependencies: postgresql-server-dev-${PG_MAJOR} postgresql${PG_MAJOR}-devel build-essential git"
+    exit 1
+fi
+
+# Parse script arguments (DB_NAME, PG_PASSWORD, PG_USER)
+DB_NAME_ARG=$1
+PG_PASSWORD_ARG=$2
+PG_USER_ARG=$3
+
+# Ask for PostgreSQL credentials if not provided
+if [ -n "$DB_NAME_ARG" ]; then
+    DB_NAME="$DB_NAME_ARG"
+else
+    read -p "Database name [postgres]: " DB_NAME
+    DB_NAME=${DB_NAME:-postgres}
+fi
+
+if [ -n "$PG_USER_ARG" ]; then
+    PG_USER="$PG_USER_ARG"
+else
+    read -p "PostgreSQL username [postgres]: " PG_USER
+    PG_USER=${PG_USER:-postgres}
+fi
+
+if [ -n "$PG_PASSWORD_ARG" ]; then
+    PG_PASSWORD="$PG_PASSWORD_ARG"
+else
+    read -p "PostgreSQL password (leave empty for no password): " PG_PASSWORD
+fi
+
+# Construct PostgreSQL connection string
+if [ -z "$PG_PASSWORD" ]; then
+    PG_CONN="-U $PG_USER -d $DB_NAME"
+else
+    export PGPASSWORD="$PG_PASSWORD"
+    PG_CONN="-U $PG_USER -d $DB_NAME"
+fi
+
+
+
+print_info "Installing required dependencies..."
+$PKG_INSTALL build-essential git $PG_DEV_PKG
+
+# Clone the pgvector repository
+print_info "Cloning pgvector repository..."
+git clone https://github.com/pgvector/pgvector.git
+cd pgvector
+
+# Compile and install the extension
+print_info "Compiling pgvector extension..."
+make
+print_info "Installing pgvector extension..."
+make install
+
+# Enable the extension in the database
+print_info "Enabling vector extension in PostgreSQL..."
+if psql $PG_CONN -c "CREATE EXTENSION IF NOT EXISTS vector;" ; then
+    print_success "pgvector extension successfully installed and enabled!"
+else
+    print_error "Failed to enable pgvector extension. Please check your PostgreSQL credentials and try again."
+    exit 1
+fi
+
+# Clean up
+if [ -n "$PGPASSWORD" ]; then
+    unset PGPASSWORD
+fi
+
+print_success "Installation completed successfully!"

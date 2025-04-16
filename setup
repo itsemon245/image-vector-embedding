@@ -1,7 +1,7 @@
 #!/bin/bash
 
 set -e
-source ./shared/colors
+source ./utils/colors
 
 echo -e "${BOLD}${GREEN}👋 Setting up the environment...${NC}"
 echo -e "${BOLD}${YELLOW}📦 Installing dependencies...${NC}"
