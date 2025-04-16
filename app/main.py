@@ -35,10 +35,12 @@ class ImageSourceType(Enum):
 @app.post("/embed")
 async def embed_image(
     files: list[UploadFile] = None,
-    urls: List[ImageURL] = Body(None)
+    urls: List[str] = Body(None)
 ):
+    print(f"Received files: {files}")
+    print(f"Received URLs: {urls}")
     if not files and not urls:
-        raise HTTPException(status_code=400, detail="No files or URLs provided")
+        raise HTTPException(status_code=400, detail="No files or URLs provided test")
     
     results = []
     
@@ -59,18 +61,24 @@ async def embed_image(
     
     # Process URLs
     if urls:
-        for item in urls:
+        for url in urls:
             try:
-                image = await get_image_from_source(str(item.url), ImageSourceType.REMOTE)
+                # Validate URL format
+                if not url.startswith(('http://', 'https://')):
+                    raise ValueError("URL must start with http:// or https://")
+                
+                image = await get_image_from_source(url, ImageSourceType.REMOTE)
                 embedding = process_image(image)
                 
                 results.append({
-                    "path": str(item.url),
+                    "path": url,
                     "embedding": embedding,
-                    "id": item.id
+                    "id": None
                 })
             except HTTPException as e:
-                raise HTTPException(status_code=e.status_code, detail=f"{item.url}: {e.detail}")
+                raise HTTPException(status_code=e.status_code, detail=f"{url}: {e.detail}")
+            except ValueError as e:
+                raise HTTPException(status_code=400, detail=f"Invalid URL format: {url}. {str(e)}")
     
     # Generate SQL query
     sql_query = generate_sql_query(results)
