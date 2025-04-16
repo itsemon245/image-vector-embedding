@@ -19,6 +19,8 @@ docker-compose up -d
 ```bash
 docker exec -i my_container bash -s -- dbname dbuser dbpassword < ./utils/pgv-init
 ```
+>![NOTE]
+>You can use the docker-compose file in the misc folder to start a postgres container
 
 
 ## Usage
