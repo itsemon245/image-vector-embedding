@@ -1,7 +1,6 @@
-version: '3.8'
-
 services:
-  clip-embedder:
+  image-vector-embed:
+    restart: always
     build:
       context: .
       dockerfile: Dockerfile

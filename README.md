@@ -1,12 +1,15 @@
 # Vector Embeeding
 
 ## Setup
-
+- Clone the repository and run the setup script
 ```bash
-git clone https://github.com/emon/image-vector-embedding.git
-cd image-vector-embedding
+git clone https://github.com/itsemon245/image-vector-embedding.git && cd image-vector-embedding && ./setup
+```
+- Start the docker container (you might want to change the port in the env)
+```bash
 docker-compose up -d
 ```
+
 
 ## Usage
 ### Embed an image
@@ -14,6 +17,7 @@ docker-compose up -d
 ```bash
 curl --location 'http://localhost:8787/embed' \
 --header 'Content-Type: application/json' \
+--header 'Authorization: Bearer <your-app-key>' \
 --data '[
     "publicly-accessible-image-url"
 ]'

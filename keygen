@@ -1,0 +1,26 @@
+#!/bin/bash
+
+set -e
+# source colors if not already
+if [[ -z "$GREEN" ]]; then
+    source ./shared/colors
+fi
+# Copy .env.example to .env if .env doesn't exist
+if [ ! -f .env ]; then
+    echo -e "${BOLD}${YELLOW}📦 Copying .env.example to .env...${NC}"
+    if ! cp .env.example .env; then
+        echo -e "${BOLD}${RED}✗ Failed to copy .env.example to .env${NC}"
+        exit 1
+    fi
+fi
+# Generate a random app key for api verification
+APP_KEY=$(openssl rand -hex 32 2>/dev/null || head -c 32 /dev/urandom | xxd -p)
+# Set auth token
+echo -e "${BOLD}${YELLOW}🔑 Setting auth token...${NC}"
+sed -i "s/APP_KEY=.*/APP_KEY=$APP_KEY/" .env
+
+echo -e "${GREEN}✓ Done! Your app key is: ${BOLD}${MAGENTA}${APP_KEY}${NC}"
+echo -e "${YELLOW}You must use this key as Bearer token to authenticate your requests to the API.${NC}"
+echo -e "${GREEN} To generate a new key, run: ${BOLD}${YELLOW}./keygen${NC}"
+echo -e "\n${BLUE}----------------------------------------${NC}\n"
+echo -e "${GREEN}✓ You can now start the docker container with: ${BOLD}${YELLOW}docker-compose up -d${NC}"
