@@ -12,3 +12,5 @@ services:
       - DEVICE=${DEVICE}
     env_file:
       - .env
+    volumes:
+      - ./app:/app
