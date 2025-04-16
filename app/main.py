@@ -34,32 +34,15 @@ class ImageSourceType(Enum):
 
 @app.post("/embed")
 async def embed_image(
-    files: list[UploadFile] = None,
-    urls: List[str] = Body(None)
+    urls: List[str] = None
 ):
-    print(f"Received files: {files}")
     print(f"Received URLs: {urls}")
-    if not files and not urls:
-        raise HTTPException(status_code=400, detail="No files or URLs provided test")
+    
+    if not urls:
+        raise HTTPException(status_code=400, detail="No URLs provided")
     
     results = []
     
-    # Process uploaded files
-    if files:
-        for file in files:
-            try:
-                image = await get_image_from_source(file, ImageSourceType.UPLOADED)
-                embedding = process_image(image)
-                
-                results.append({
-                    "path": file.filename,
-                    "embedding": embedding,
-                    "id": None
-                })
-            except HTTPException as e:
-                raise HTTPException(status_code=e.status_code, detail=f"{file.filename}: {e.detail}")
-    
-    # Process URLs
     if urls:
         for url in urls:
             try:
@@ -72,7 +55,7 @@ async def embed_image(
                 
                 results.append({
                     "path": url,
-                    "embedding": embedding,
+                    "embedding": str(embedding),  # Convert embedding to string
                     "id": None
                 })
             except HTTPException as e:
@@ -80,54 +63,16 @@ async def embed_image(
             except ValueError as e:
                 raise HTTPException(status_code=400, detail=f"Invalid URL format: {url}. {str(e)}")
     
-    # Generate SQL query
-    sql_query = generate_sql_query(results)
-    
     # If only one file was provided, maintain backward compatibility
     if len(results) == 1:
         return JSONResponse(content={
-            "embedding": results[0]["embedding"],
-            "sql_query": sql_query
+            "embedding": results[0]["embedding"]
         })
     
     return JSONResponse(content={
-        "embeddings": [{"path": r["path"], "embedding": r["embedding"]} for r in results],
-        "sql_query": sql_query
+        "embeddings": [{"path": r["path"], "embedding": r["embedding"]} for r in results]
     })
 
-@app.post("/search")
-async def search_image(
-    file: UploadFile = None,
-    url: str = Form(None)
-):
-    """
-    Process a single image from either an uploaded file or URL and return its embedding vector.
-    This endpoint is optimized for search operations.
-    """
-    if not file and not url:
-        raise HTTPException(status_code=400, detail="Either file or URL must be provided")
-    
-    if file and url:
-        raise HTTPException(status_code=400, detail="Provide either a file or URL, not both")
-    
-    try:
-        if file:
-            image = await get_image_from_source(file, ImageSourceType.UPLOADED)
-            source_name = file.filename
-        else:  # url is provided
-            image = await get_image_from_source(url, ImageSourceType.REMOTE)
-            source_name = url
-        
-        embedding = process_image(image)
-        
-        return JSONResponse(content={
-            "source": source_name,
-            "embedding": embedding
-        })
-    except HTTPException as e:
-        raise e
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=f"Error processing image: {str(e)}")
 
 async def get_image_from_source(source, source_type: ImageSourceType):
     """
@@ -175,18 +120,50 @@ def generate_sql_query(results):
     if not results:
         return ""
     
-    query = "INSERT INTO images (path, embedding) VALUES\n"
+    query = "INSERT INTO images (path, embedding) VALUES "
     
     values = []
     for r in results:
-        # Format the embedding as a string representation of an array
-        embedding_str = str(r["embedding"]).replace('[', 'ARRAY[').replace(']', ']')
+        # Convert the embedding to a string representation
+        embedding_str = str(r["embedding"])
         
-        values.append(f"  ('{r['path']}', {embedding_str})")
+        # Escape single quotes in the path
+        path = r['path'].replace("'", "''")
+        
+        values.append(f"  ('{path}', '{embedding_str}')")
     
-    query += ",\n".join(values)
+    query += ", ".join(values)
     
     return query
+
+
+# @app.post("/search")
+# async def search_image(
+#     url: str = Form(...)
+# ):
+#     """
+#     Process a single image from a URL and return its embedding vector as a string.
+#     This endpoint is optimized for search operations.
+#     """
+#     if not url:
+#         raise HTTPException(status_code=400, detail="URL must be provided")
+#     
+#     try:
+#         image = await get_image_from_source(url, ImageSourceType.REMOTE)
+#         embedding = process_image(image)
+#         
+#         # Convert embedding to string
+#         embedding_str = str(embedding)
+#         
+#         return JSONResponse(content={
+#             "source": url,
+#             "embedding": embedding_str
+#         })
+#     except HTTPException as e:
+#         raise e
+#     except Exception as e:
+#         raise HTTPException(status_code=400, detail=f"Error processing image: {str(e)}")
+
 
 if __name__ == "__main__":
     import uvicorn
