@@ -27,7 +27,7 @@ export USER=my_user
 export PORT=5432
 export HOST=localhost
 ```
-- Copy and paste the script in terminal(you might be prompted to enter password)
+- Copy and paste the script in terminal(you might be prompted to enter the DB password)
 ```bash
 # Install required dependencies
 apt-get update
@@ -40,7 +40,7 @@ cd pgvector
 make
 make install
 
-# Enable the extension in the database(you might be prompted to enter password)
+# Enable the extension in the database
 psql -d ${DB} -U ${USER} -h ${HOST} -p ${PORT} -c "CREATE EXTENSION IF NOT EXISTS vector;"
 ```
 >![NOTE]
