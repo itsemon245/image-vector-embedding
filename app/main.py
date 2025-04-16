@@ -4,13 +4,14 @@ from typing import List, Union
 from pydantic import BaseModel, HttpUrl, validator
 from fastapi import FastAPI, UploadFile, HTTPException, Form, Body, Request, Depends
 from fastapi.responses import JSONResponse
-from fastapi.middleware.base import BaseHTTPMiddleware
-from transformers import CLIPProcessor, CLIPModel
 from PIL import Image
 import torch
 import io
 from dotenv import load_dotenv
 from enum import Enum
+
+# Import the middleware
+from middleware.auth import AuthMiddleware
 
 load_dotenv()
 
@@ -21,40 +22,15 @@ MODEL_NAME = os.getenv("MODEL_NAME", "openai/clip-vit-base-patch32")
 DEVICE = os.getenv("DEVICE", "cpu")
 APP_KEY = os.getenv("APP_KEY")
 
+@app.on_event("startup")
+def check_env():
+    if not APP_KEY:
+        raise RuntimeError("APP_KEY environment variable must be set")
+
 # Load the model and processor
+from transformers import CLIPProcessor, CLIPModel
 model = CLIPModel.from_pretrained(MODEL_NAME).to(DEVICE)
 processor = CLIPProcessor.from_pretrained(MODEL_NAME)
-
-class AuthMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request: Request, call_next):
-        # Skip auth for docs
-        if request.url.path in ["/docs", "/openapi.json", "/redoc"]:
-            return await call_next(request)
-            
-        # Check for Authorization header
-        auth_header = request.headers.get("Authorization")
-        if not auth_header:
-            return JSONResponse(
-                status_code=401,
-                content={"detail": "Authorization header missing"}
-            )
-            
-        # Validate Bearer token
-        parts = auth_header.split()
-        if len(parts) != 2 or parts[0].lower() != "bearer":
-            return JSONResponse(
-                status_code=401,
-                content={"detail": "Invalid authorization header format. Use 'Bearer TOKEN'"}
-            )
-            
-        token = parts[1]
-        if token != APP_KEY:
-            return JSONResponse(
-                status_code=401,
-                content={"detail": "Invalid token"}
-            )
-            
-        return await call_next(request)
 
 # Add the middleware
 app.add_middleware(AuthMiddleware)
