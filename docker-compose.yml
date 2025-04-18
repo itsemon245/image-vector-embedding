@@ -6,9 +6,6 @@ services:
       dockerfile: Dockerfile
     ports:
       - "${PORT}:${PORT}"
-    environment:
-      - MODEL_NAME=${MODEL_NAME}
-      - DEVICE=${DEVICE}
     env_file:
       - .env
     volumes:

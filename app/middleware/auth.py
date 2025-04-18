@@ -11,7 +11,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
         if not auth_header:
             return JSONResponse(
                 status_code=401,
-                content={"detail": "Authorization header missing"}
+                content={"detail": "Authorization header missing. Use 'Bearer TOKEN'"}
             )
             
         # Validate Bearer token
