@@ -22,5 +22,4 @@ sed -i "s/APP_KEY=.*/APP_KEY=$APP_KEY/" .env
 echo -e "${GREEN}✓ Done! Your app key is: ${BOLD}${MAGENTA}${APP_KEY}${NC}"
 echo -e "${YELLOW}You must use this key as Bearer token to authenticate your requests to the API.${NC}"
 echo -e "${GREEN} To generate a new key, run: ${BOLD}${YELLOW}./keygen${NC}"
-echo -e "\n${BLUE}----------------------------------------${NC}\n"
-echo -e "${GREEN}✓ You can now start the docker container with: ${BOLD}${YELLOW}docker-compose up -d${NC}"
+

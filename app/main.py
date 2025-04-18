@@ -17,17 +17,37 @@ load_dotenv()
 
 app = FastAPI()
 
+#add a colors dictionary
+colors = {
+    "red": "\033[91m",
+    "green": "\033[92m",
+    "yellow": "\033[93m",
+    "blue": "\033[94m",
+    "magenta": "\033[95m",
+    "cyan": "\033[96m",
+    "white": "\033[97m",
+    "reset": "\033[0m"
+}
+
+# add a function to print with colors
+def cPrint(color, message):
+    print(f"{colors[color]}{message}{colors['reset']}")
+
 # Load environment variables
 MODEL_NAME = os.getenv("MODEL_NAME", "openai/clip-vit-base-patch32")
 DEVICE = os.getenv("DEVICE", "cpu")
 APP_KEY = os.getenv("APP_KEY")
+PORT = int(os.getenv("PORT", 8787))
+HOST = os.getenv("HOST", "0.0.0.0")
 
-@app.on_event("startup")
-def check_env():
-    if not APP_KEY:
-        raise RuntimeError("APP_KEY environment variable must be set")
+# Check for env variables
+if not APP_KEY:
+    cPrint("red", "APP_KEY environment variable must be set")
+    raise RuntimeError("APP_KEY environment variable must be set")
 
 # Load the model and processor
+# add colors to the print statements
+cPrint("green", f"Loading model {MODEL_NAME} on device {DEVICE}...")
 from transformers import CLIPProcessor, CLIPModel
 model = CLIPModel.from_pretrained(MODEL_NAME).to(DEVICE)
 processor = CLIPProcessor.from_pretrained(MODEL_NAME)
@@ -48,7 +68,7 @@ class ImageSourceType(Enum):
 async def embed_image(
     urls: List[str] = None
 ):
-    print(f"Received URLs: {urls}")
+    cPrint("yellow", f"Received URLs: {urls}")
     
     if not urls:
         raise HTTPException(status_code=400, detail="No URLs provided")
@@ -149,34 +169,11 @@ def generate_sql_query(results):
     return query
 
 
-# @app.post("/search")
-# async def search_image(
-#     url: str = Form(...)
-# ):
-#     """
-#     Process a single image from a URL and return its embedding vector as a string.
-#     This endpoint is optimized for search operations.
-#     """
-#     if not url:
-#         raise HTTPException(status_code=400, detail="URL must be provided")
-#     
-#     try:
-#         image = await get_image_from_source(url, ImageSourceType.REMOTE)
-#         embedding = process_image(image)
-#         
-#         # Convert embedding to string
-#         embedding_str = str(embedding)
-#         
-#         return JSONResponse(content={
-#             "source": url,
-#             "embedding": embedding_str
-#         })
-#     except HTTPException as e:
-#         raise e
-#     except Exception as e:
-#         raise HTTPException(status_code=400, detail=f"Error processing image: {str(e)}")
-
-
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    def on_reload():
+        cPrint("green", f"🚀 Server successfully restarted! Running on http://{HOST}:{PORT}")
+    
+    config = uvicorn.Config("main:app", port=PORT, log_level="info")
+    server = uvicorn.Server(config)
+    server.run()

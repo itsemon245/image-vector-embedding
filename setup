@@ -20,3 +20,5 @@ sed -i "s/PORT=.*/PORT=${PORT}/" .env
 
 # Generate key and update .env
 source ./keygen
+echo -e "\n${BLUE}----------------------------------------${NC}\n"
+echo -e "${GREEN}✓ You can now start the docker container with: ${BOLD}${YELLOW}docker-compose up -d${NC}"

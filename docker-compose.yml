@@ -5,7 +5,7 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "${PORT}:8000"
+      - "${PORT}:${PORT}"
     environment:
       - MODEL_NAME=${MODEL_NAME}
       - DEVICE=${DEVICE}
