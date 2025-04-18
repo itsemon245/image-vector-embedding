@@ -1,21 +1,19 @@
 import os
 import requests
-from typing import List, Union
-from pydantic import BaseModel, HttpUrl, validator
-from fastapi import FastAPI, UploadFile, HTTPException, Form, Body, Request, Depends
-from fastapi.responses import JSONResponse
+from typing import List
 from PIL import Image
 import torch
 import io
 from dotenv import load_dotenv
 from enum import Enum
 
-# Import the middleware
-from middleware.auth import AuthMiddleware
-
 load_dotenv()
-
-app = FastAPI()
+# Load environment variables
+MODEL_NAME = os.getenv("MODEL_NAME", "openai/clip-vit-base-patch32")
+DEVICE = os.getenv("DEVICE", "cpu")
+APP_KEY = os.getenv("APP_KEY")
+PORT = int(os.getenv("PORT", 8787))
+HOST = os.getenv("HOST", "0.0.0.0")
 
 #add a colors dictionary
 colors = {
@@ -33,12 +31,7 @@ colors = {
 def cPrint(color, message):
     print(f"{colors[color]}{message}{colors['reset']}")
 
-# Load environment variables
-MODEL_NAME = os.getenv("MODEL_NAME", "openai/clip-vit-base-patch32")
-DEVICE = os.getenv("DEVICE", "cpu")
-APP_KEY = os.getenv("APP_KEY")
-PORT = int(os.getenv("PORT", 8787))
-HOST = os.getenv("HOST", "0.0.0.0")
+
 
 # Check for env variables
 if not APP_KEY:
@@ -52,12 +45,17 @@ from transformers import CLIPProcessor, CLIPModel
 model = CLIPModel.from_pretrained(MODEL_NAME).to(DEVICE)
 processor = CLIPProcessor.from_pretrained(MODEL_NAME)
 
+
+from pydantic import BaseModel, HttpUrl, validator
+from fastapi import FastAPI, UploadFile, HTTPException, Form, Body, Request, Depends
+from fastapi.responses import JSONResponse
+
+app = FastAPI()
+
+# Import the middleware
+from middleware.auth import AuthMiddleware
 # Add the middleware
 app.add_middleware(AuthMiddleware)
-
-class ImageURL(BaseModel):
-    url: HttpUrl
-    id: int = None
 
 class ImageSourceType(Enum):
     LOCAL = "local"
@@ -75,25 +73,24 @@ async def embed_image(
     
     results = []
     
-    if urls:
-        for url in urls:
-            try:
-                # Validate URL format
-                if not url.startswith(('http://', 'https://')):
-                    raise ValueError("URL must start with http:// or https://")
-                
-                image = await get_image_from_source(url, ImageSourceType.REMOTE)
-                embedding = process_image(image)
-                
-                results.append({
-                    "path": url,
-                    "embedding": str(embedding),  # Convert embedding to string
-                    "id": None
-                })
-            except HTTPException as e:
-                raise HTTPException(status_code=e.status_code, detail=f"{url}: {e.detail}")
-            except ValueError as e:
-                raise HTTPException(status_code=400, detail=f"Invalid URL format: {url}. {str(e)}")
+    for url in urls:
+        try:
+            # Validate URL format
+            if not url.startswith(('http://', 'https://')):
+                raise ValueError("URL must start with http:// or https://")
+            
+            image = await get_image_from_source(url, ImageSourceType.REMOTE)
+            embedding = process_image(image)
+            
+            results.append({
+                "path": url,
+                "embedding": str(embedding),  # Convert embedding to string
+                "id": None
+            })
+        except HTTPException as e:
+            raise HTTPException(status_code=e.status_code, detail=f"{url}: {e.detail}")
+        except ValueError as e:
+            raise HTTPException(status_code=400, detail=f"Invalid URL format: {url}. {str(e)}")
     
     # If only one file was provided, maintain backward compatibility
     if len(results) == 1:
@@ -138,42 +135,21 @@ async def get_image_from_source(source, source_type: ImageSourceType):
 
 def process_image(image):
     """Process an image and return its embedding vector."""
-    inputs = processor(images=image, return_tensors="pt").to(DEVICE)
-    
-    with torch.no_grad():
-        image_features = model.get_image_features(**inputs)
-    
-    # Normalize the features - results in a 512-dimensional vector for clip-vit-base-patch32
-    image_features = image_features / image_features.norm(p=2, dim=-1, keepdim=True)
-    return image_features[0].tolist()
-
-def generate_sql_query(results):
-    """Generate an SQL INSERT query for the embeddings."""
-    if not results:
-        return ""
-    
-    query = "INSERT INTO images (path, embedding) VALUES "
-    
-    values = []
-    for r in results:
-        # Convert the embedding to a string representation
-        embedding_str = str(r["embedding"])
+    try:
+        inputs = processor(images=image, return_tensors="pt").to(DEVICE)
         
-        # Escape single quotes in the path
-        path = r['path'].replace("'", "''")
+        with torch.no_grad():
+            image_features = model.get_image_features(**inputs)
         
-        values.append(f"  ('{path}', '{embedding_str}')")
-    
-    query += ", ".join(values)
-    
-    return query
+        # Normalize the features
+        image_features = image_features / image_features.norm(p=2, dim=-1, keepdim=True)
+        return image_features[0].tolist()
+    except RuntimeError as e:
+        raise HTTPException(status_code=500, detail=f"Error processing image: {str(e)}")
 
 
 if __name__ == "__main__":
     import uvicorn
-    def on_reload():
-        cPrint("green", f"🚀 Server successfully restarted! Running on http://{HOST}:{PORT}")
-    
     config = uvicorn.Config("main:app", port=PORT, log_level="info")
     server = uvicorn.Server(config)
     server.run()
