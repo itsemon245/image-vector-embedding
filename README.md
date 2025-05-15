@@ -9,46 +9,57 @@ git clone https://github.com/itsemon245/image-vector-embedding.git && cd image-v
 ```bash
 docker-compose up -d
 ```
-### Install pgvector extension in postgres
-#### If you are not using docker
+### Install pgvector extension to enable vector datatypes
+<details>
+  <summary>If postgres is in Host Machine</summary>
+
 ```bash
 ./utils/pgv-init
 ```
 
-#### If you are using docker
-- Enter in your container shell (change the container name)
+</details>
+
+<details>
+  <summary>If Postgres is in a docker container</summary>
+
+- Enter your container shell (replace `my_container` with your container name):
 ```bash
 docker exec -it my_container bash
 ```
-- Set your database name, user and password
+
+- Set your database environment variables:
 ```bash
 export DB=my_database
 export USER=my_user
 export PORT=5432
 export HOST=localhost
 ```
-- Install Dependencies
+
+- Install dependencies:
 ```bash
 apt-get update
-apt-get install -y build-essential postgresql-server-dev-${PG_MAJOR:-17} libpq-dev
+apt-get install -y build-essential postgresql-server-dev-\${PG_MAJOR:-17} libpq-dev
 ```
 
-- Clone the pgvector repository
-```
+- Clone the pgvector repository and enter it:
+```bash
 git clone https://github.com/pgvector/pgvector.git
 cd pgvector
 ```
 
-- Install the pgvector binary 
-```
+- Build and install pgvector:
+```bash
 make
 make install
 ```
 
-- Enable the extension in the database
+- Enable the extension in your database:
+```bash
+psql -d \${DB} -U \${USER} -h \${HOST} -p \${PORT} -c "CREATE EXTENSION IF NOT EXISTS vector;"
 ```
-psql -d ${DB} -U ${USER} -h ${HOST} -p ${PORT} -c "CREATE EXTENSION IF NOT EXISTS vector;"
-```
+
+</details>
+
 
 >![NOTE]
 >You can use the docker-compose file in the misc folder to start a postgres container
