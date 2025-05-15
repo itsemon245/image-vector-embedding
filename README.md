@@ -10,7 +10,7 @@ git clone https://github.com/itsemon245/image-vector-embedding.git && cd image-v
 docker-compose up -d
 ```
 ### Install pgvector extension in postgres
-#### If you are not using dockre
+#### If you are not using docker
 ```bash
 ./utils/pgv-init
 ```
