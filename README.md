@@ -27,20 +27,26 @@ export USER=my_user
 export PORT=5432
 export HOST=localhost
 ```
-- Copy and paste the script in terminal(you might be prompted to enter the DB password)
+- Install Dependencies
 ```bash
-# Install required dependencies
 apt-get update
 apt-get install -y build-essential postgresql-server-dev-${PG_MAJOR:-17} libpq-dev
+```
 
-# Clone the pgvector repository
+- Clone the pgvector repository
+```
 git clone https://github.com/pgvector/pgvector.git
 cd pgvector
-#install
+```
+
+- Install the pgvector binary 
+```
 make
 make install
+```
 
-# Enable the extension in the database
+- Enable the extension in the database
+```
 psql -d ${DB} -U ${USER} -h ${HOST} -p ${PORT} -c "CREATE EXTENSION IF NOT EXISTS vector;"
 ```
 >![NOTE]
