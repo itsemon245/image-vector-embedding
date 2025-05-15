@@ -49,6 +49,7 @@ make install
 ```
 psql -d ${DB} -U ${USER} -h ${HOST} -p ${PORT} -c "CREATE EXTENSION IF NOT EXISTS vector;"
 ```
+
 >![NOTE]
 >You can use the docker-compose file in the misc folder to start a postgres container
 
