@@ -5,7 +5,7 @@ source ./utils/colors
 
 echo -e "${BOLD}${GREEN}👋 Setting up the environment...${NC}"
 echo -e "${BOLD}${YELLOW}📦 Installing dependencies...${NC}"
-PORT=${$1:-8787}
+PORT=${1:-8787}
 
 # Only copy .env.example if .env doesn't exist
 if [ ! -f .env ]; then
