@@ -1,22 +1,50 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -euo pipefail  # Better error handling
 
-set -e
-source ./utils/colors
+# Source colors file safely
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [[ -f "${SCRIPT_DIR}/utils/colors" ]]; then
+    source "${SCRIPT_DIR}/utils/colors"
+else
+    echo "❌ Error: colors file not found!"
+    exit 1
+fi
 
 echo -e "${BOLD}${GREEN}👋 Setting up the environment...${NC}"
 echo -e "${BOLD}${YELLOW}📦 Installing dependencies...${NC}"
-PORT=${1:-8787}
 
-# Only copy .env.example if .env doesn't exist
-if [ ! -f .env ]; then
-    echo -e "${BOLD}${YELLOW}📦 Copying .env.example to .env...${NC}"
-    cp .env.example .env
+# Set default port safely
+PORT="${1:-8787}"
+
+# Validate port is a number
+if ! [[ "${PORT}" =~ ^[0-9]+$ ]]; then
+    echo -e "${BOLD}${RED}❌ Error: Port must be a number!${NC}"
+    exit 1
 fi
 
-# Update .env with the port
-sed -i "s/PORT=.*/PORT=${PORT}/" .env
+# Handle .env file creation
+if [[ ! -f ".env" ]]; then
+    echo -e "${BOLD}${YELLOW}📦 Copying .env.example to .env...${NC}"
+    cp --verbose .env.example .env
+fi
 
-# Generate key and update .env
-source ./keygen
+# Cross-platform sed in-place replacement
+if sed --version &>/dev/null; then
+    # GNU sed (Linux)
+    sed -i "s/PORT=.*/PORT=${PORT}/" .env
+else
+    # BSD sed (macOS)
+    sed -i '' "s/PORT=.*/PORT=${PORT}/" .env
+fi
+
+# Handle keygen execution safely
+if [[ -f "keygen" ]]; then
+    source ./keygen
+else
+    echo -e "${BOLD}${RED}❌ Error: keygen script not found!${NC}"
+    exit 1
+fi
+
 echo -e "\n${BLUE}----------------------------------------${NC}\n"
-echo -e "${GREEN}✓ You can now start the docker container with: ${BOLD}${YELLOW}docker-compose up -d${NC}"
+echo -e "${GREEN}✓ You can now start the docker container with:"
+echo -e "${BOLD}${YELLOW}docker-compose up -d${NC}"
