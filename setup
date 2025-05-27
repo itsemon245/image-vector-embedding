@@ -5,9 +5,7 @@ source ./utils/colors
 
 echo -e "${BOLD}${GREEN}👋 Setting up the environment...${NC}"
 echo -e "${BOLD}${YELLOW}📦 Installing dependencies...${NC}"
-#Ask for the port
-read -p "Enter the port number (default: 8787): " PORT
-PORT=${PORT:-8787}
+PORT=${$1:-8787}
 
 # Only copy .env.example if .env doesn't exist
 if [ ! -f .env ]; then
