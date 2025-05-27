@@ -17,7 +17,7 @@ fi
 APP_KEY=$(openssl rand -hex 32 2>/dev/null || head -c 32 /dev/urandom | xxd -p)
 # Set auth token
 echo -e "${BOLD}${YELLOW}🔑 Setting auth token...${NC}"
-sed -i "s/APP_KEY=.*/APP_KEY=$APP_KEY/" .env
+sed -i "s|AUTH_TOKEN=.*|AUTH_TOKEN=${AUTH_TOKEN}|" .env
 
 echo -e "${GREEN}✓ Done! Your app key is: ${BOLD}${MAGENTA}${APP_KEY}${NC}"
 echo -e "${YELLOW}You must use this key as Bearer token to authenticate your requests to the API.${NC}"
