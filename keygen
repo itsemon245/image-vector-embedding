@@ -1,25 +1,47 @@
-#!/bin/bash
+#!/usr/bin/env bash
+set -euo pipefail
 
-set -e
-# source colors if not already
-if [[ -z "$GREEN" ]]; then
-    source ./utils/colors
+# Get script directory for reliable path resolution
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Source colors file safely
+if [[ -z "${GREEN:-}" ]] && [[ -f "${SCRIPT_DIR}/utils/colors" ]]; then
+    source "${SCRIPT_DIR}/utils/colors"
 fi
-# Copy .env.example to .env if .env doesn't exist
-if [ ! -f .env ]; then
-    echo -e "${BOLD}${YELLOW}📦 Copying .env.example to .env...${NC}"
-    if ! cp .env.example .env; then
-        echo -e "${BOLD}${RED}✗ Failed to copy .env.example to .env${NC}"
-        exit 1
-    fi
+
+# Function to display error and exit
+die() {
+    echo -e "${BOLD}${RED}❌ Error: $1${NC}" >&2
+    exit 1
+}
+
+# Check if .env exists
+if [[ ! -f "${SCRIPT_DIR}/.env" ]]; then
+    die ".env file not found! Run setup script first."
 fi
-# Generate a random app key for api verification
-APP_KEY=$(openssl rand -hex 32 2>/dev/null || head -c 32 /dev/urandom | xxd -p)
-# Set auth token
-echo -e "${BOLD}${YELLOW}🔑 Setting auth token...${NC}"
-sed -i "s|AUTH_TOKEN=.*|AUTH_TOKEN=${AUTH_TOKEN}|" .env
 
-echo -e "${GREEN}✓ Done! Your app key is: ${BOLD}${MAGENTA}${APP_KEY}${NC}"
-echo -e "${YELLOW}You must use this key as Bearer token to authenticate your requests to the API.${NC}"
-echo -e "${GREEN} To generate a new key, run: ${BOLD}${YELLOW}./keygen${NC}"
+# Generate app key with fallbacks
+echo -e "${BOLD}${YELLOW}🔑 Generating new app key...${NC}"
+if ! APP_KEY=$(openssl rand -hex 32 2>/dev/null || 
+             (head -c 32 /dev/urandom 2>/dev/null | xxd -p -c 256) || 
+             die "Failed to generate secure random key"); then
+    die "Key generation failed"
+fi
 
+# Validate key length
+if [[ ${#APP_KEY} -ne 64 ]]; then
+    die "Invalid key length (${#APP_KEY} chars). Expected 64-character hex string."
+fi
+
+# Platform-safe sed replacement
+echo -e "${BOLD}${YELLOW}🔑 Updating .env file...${NC}"
+if sed --version &>/dev/null; then
+    # GNU sed (Linux)
+    sed -i "s|APP_KEY=.*|APP_KEY=${APP_KEY}|" "${SCRIPT_DIR}/.env"
+else
+    # BSD sed (macOS)
+    sed -i '' "s|APP_KEY=.*|APP_KEY=${APP_KEY}|" "${SCRIPT_DIR}/.env"
+fi
+
+echo -e "\n${GREEN}✓ New app key generated: ${BOLD}${MAGENTA}${APP_KEY}${NC}"
+echo -e "${YELLOW}⚠️ Update your API clients with this new key!${NC}"
